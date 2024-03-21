@@ -59,4 +59,67 @@ let phrasesArray = [
 
   console.log(compareStringsToNumbers(phrasesArray, 35))
 
+
+  function printNos(n){
+      if(n > 0){
+          printNos(n-1);
+          console.log(n + " ");
+      }
+      return;
+  }
   
+  let n = 10;
+printNos(n)
+
+
+//PART 2
+
+let people = [{ id: "42", name: "Bruce", occupation: "Knight", age: "41" },
+{ id: "48", name: "Barry", occupation: "Runner", age: "25" },
+{ id: "57", name: "Bob", occupation: "Fry Cook", age: "19" },
+{ id: "63", name: "Blaine", occupation: "Quiz Master", age: "58" },
+{ id: "7", name: "Bilbo", occupation: "None", age: "111" }]
+
+//Sort by age
+
+people.sort((a, b) => {
+    return a.age - b.age;
+})
+
+console.log(people)
+
+
+//Filter older than 50
+
+let lessThan50 = people.filter(person => person.age < 50)
+
+console.log("Less than 50", lessThan50)
+
+//Use map
+let mapJobs = people.map( person => (
+    {
+    id: person.id,
+    name: person.name,
+    job: person.occupation,
+    age: Number(person.age) + 1
+}
+));
+
+console.log("Map jobs", mapJobs)
+
+//use Reduce
+let reducedPeople = mapJobs.reduce((acc, person)=>  acc += person.age, 0)
+
+console.log("reduced", reducedPeople)
+
+let averageAge = reducedPeople / mapJobs.length;
+
+console.log("Average age", averageAge)
+
+//Part 3
+let oneObject = mapJobs[0]
+console.log(mapJobs[0].age)
+function incrementAge (oneObject) {
+    return oneObject.age + 1
+}
+console.log("increment age", incrementAge(oneObject))
