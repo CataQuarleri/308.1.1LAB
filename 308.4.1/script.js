@@ -68,6 +68,10 @@ console.log(ageAverage);
 //Part 5
 let csvAgain = "";
 for (let i = 0; i < arrayOfObjects.length; i++) {
+  if (i === 0) {
+    csvAgain += Object.keys(arrayOfObjects[0]) + ",";
+  }
+  csvAgain += "\\n";
   for (let value in arrayOfObjects[i]) {
     csvAgain += arrayOfObjects[i][value] + ",";
   }
