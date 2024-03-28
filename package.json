@@ -1,0 +1,25 @@
+{
+  "name": "308.1.1lab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run": "nodemon start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CataQuarleri/308LABS.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CataQuarleri/308LABS/issues"
+  },
+  "homepage": "https://github.com/CataQuarleri/308LABS#readme",
+  "dependencies": {
+    "nodemon": "^3.1.0" ,
+    "@types/node": "^18.0.6",
+    "node-fetch": "^3.2.6"
+  }
+}
