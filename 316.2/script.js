@@ -28,8 +28,10 @@ console.log(numberToGuess);
 let playerNumber = 0;
 let attempts = 0;
 function mainGaming(playerNumber, numberToGuess) {
-
-  playerNumber = prompt("Choose your number: ");
+attempts++
+  if (attempts <= 3){
+    
+    playerNumber = prompt("Choose your number: ");
   console.log("PLAYER NUMBER", playerNumber);
   document.getElementById("playerNumber").innerHTML = `${playerNumber}`;
 
@@ -42,19 +44,23 @@ function mainGaming(playerNumber, numberToGuess) {
 setTimeout(()=>{
     alert("TRY A HIGHER NUMBER")
     mainGaming(playerNumber, numberToGuess);
-}, 100)
+}, 1000)
 
   } else if (playerNumber > numberToGuess) {
   
     console.log("TRY A LOWER NUMBER");
     setTimeout(()=>{
-    alert("TRY A LOWER NUMBER")
+        alert("TRY A LOWER NUMBER")
         mainGaming(playerNumber, numberToGuess);
-    }, 100)
-  } else {
-    playerNumber = 'YOU LOST'
-  }
-
+    }, 1000)
+  } 
+//   else {
+//     playerNumber = 'YOU LOST'
+//   }
+}else {
+  document.getElementById("result").innerHTML = `The number was ${numberToGuess}`;
+    alert("YOU LOST")
+}
 
 
 //   if (gameOver) {
@@ -68,5 +74,5 @@ setTimeout(()=>{
 document.getElementById("firstNumber").innerHTML = `${chosenNumber}`;
 setTimeout(()=>{
     mainGaming(playerNumber, numberToGuess);
-}, 300)
+}, 5000)
 

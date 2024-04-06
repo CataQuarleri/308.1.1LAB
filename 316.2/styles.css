@@ -1,0 +1,6 @@
+body {
+    display: flex;
+    flex-flow: wrap column;
+    align-content: center;
+    align-items: center;
+}
