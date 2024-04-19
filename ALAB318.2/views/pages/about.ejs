@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/styles.css" rel="stylesheet" type="text/css">
+   
+    <title>About</title>
+</head>
+<body>
+    <ul>
+        <% console.log("BODY", body) %>
+        <% menu.forEach(element => { %>
+         <a href= <%=element.href%>><%=element.tag%></a> 
+        <% }) %>
+    </ul>
+    <h1>This is the <%= body.tag %> page</h1>
+    <p><%= body.body %></p>
+</body>
+</html>
