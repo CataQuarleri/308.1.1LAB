@@ -7,6 +7,44 @@ const app = express();
 
 app.use(express.json());
 
+//Indexes
+const createIndexes = async () => {
+	try {
+		await db.collection('grades').createIndex({ class_id: 1 });
+
+		await db.collection('grades').createIndex({ learner_id: 1 });
+
+		await db.collection('grades').createIndex({ learner_id: 1, class_id: 1 });
+
+		console.log('Indexes created successfully');
+	} catch (error) {
+		console.error('Error creating indexes:', error);
+	}
+};
+
+//Validation
+db.collection('grades', {
+	validator: {
+		$jsonSchema: {
+			bsonType: 'object',
+			required: ['class_id', 'learner_id'],
+			properties: {
+				class_id: {
+					bsonType: 'int',
+					minimum: 0,
+					maximum: 300,
+					description: 'class_id must be an integer between 0 and 300'
+				},
+				learner_id: {
+					bsonType: 'int',
+					minimum: 0,
+					description: 'learner_id must be an integer greater than or equal to 0'
+				}
+			}
+		}
+	},
+	validationAction: 'warn'
+});
 // The schema
 const learnerSchema = {
 	// Use the $jsonSchema operator
@@ -51,44 +89,49 @@ app.get('/', async (req, res) => {
 	res.send(result).status(204);
 });
 
-app.get('/learner/:id/avg-class', async (req, res) => {
+app.get('/grades/stats', async (req, res) => {
 	let collection = await db.collection('grades');
-
+	let classId = req.params.id;
 	let result = await collection
 		.aggregate([
 			{
-				$match: { learner_id: Number(req.params.id) }
-			},
-			{
-				$unwind: { path: '$scores' }
+				$unwind: {
+					path: '$scores'
+				}
 			},
 			{
 				$group: {
-					_id: '$class_id',
+					_id: '$student_id',
 					quiz: {
 						$push: {
 							$cond: {
-								if: { $eq: ['$scores.type', 'quiz'] },
+								'if': {
+									$eq: ['$scores.type', 'quiz']
+								},
 								then: '$scores.score',
-								else: '$$REMOVE'
+								'else': '$$REMOVE'
 							}
 						}
 					},
 					exam: {
 						$push: {
 							$cond: {
-								if: { $eq: ['$scores.type', 'exam'] },
+								'if': {
+									$eq: ['$scores.type', 'exam']
+								},
 								then: '$scores.score',
-								else: '$$REMOVE'
+								'else': '$$REMOVE'
 							}
 						}
 					},
 					homework: {
 						$push: {
 							$cond: {
-								if: { $eq: ['$scores.type', 'homework'] },
+								'if': {
+									$eq: ['$scores.type', 'homework']
+								},
 								then: '$scores.score',
-								else: '$$REMOVE'
+								'else': '$$REMOVE'
 							}
 						}
 					}
@@ -100,242 +143,181 @@ app.get('/learner/:id/avg-class', async (req, res) => {
 					class_id: '$_id',
 					avg: {
 						$sum: [
-							{ $multiply: [{ $avg: '$exam' }, 0.5] },
-							{ $multiply: [{ $avg: '$quiz' }, 0.3] },
-							{ $multiply: [{ $avg: '$homework' }, 0.2] }
+							{
+								$multiply: [
+									{
+										$avg: '$exam'
+									},
+									0.5
+								]
+							},
+							{
+								$multiply: [{ $avg: '$quiz' }, 0.3]
+							},
+							{
+								$multiply: [{ $avg: '$homework' }, 0.2]
+							}
 						]
+					}
+				}
+			},
+			{
+				$group: {
+					_id: null,
+					class_id: {
+						$push: '$class_id'
+					},
+					totalStudents: {
+						$sum: 1
+					},
+					above60Students: {
+						$sum: {
+							$cond: {
+								'if': { $gt: ['$avg', 60] },
+								then: 1,
+								'else': 0
+							}
+						}
+					}
+				}
+			},
+			{
+				$project: {
+					totalStudents: '$totalStudents',
+					above60Students: '$above60Students',
+					ratio: {
+						$divide: ['$above60Students', '$totalStudents']
 					}
 				}
 			}
 		])
 		.toArray();
-
-	if (!result) res.send('Not found').status(404);
-	else res.send(result).status(200);
-});
-
-app.get('/grades/stats', async (req, res) => {
-	let collection = await db.collection('grades');
-let classId = req.params.id
-	let result = await collection
-		.aggregate([{
-      $unwind: {
-       path: '$scores'
-      }
-     }, {
-      $group: {
-       _id: '$student_id',
-       quiz: {
-        $push: {
-         $cond: {
-          'if': {
-           $eq: [
-            '$scores.type',
-            'quiz'
-           ]
-          },
-          then: '$scores.score',
-          'else': '$$REMOVE'
-         }
-        }
-       },
-       exam: {
-        $push: {
-         $cond: {
-          'if': {
-           $eq: [
-            '$scores.type',
-            'exam'
-           ]
-          },
-          then: '$scores.score',
-          'else': '$$REMOVE'
-         }
-        }
-       },
-       homework: {
-        $push: {
-         $cond: {
-          'if': {
-           $eq: [
-            '$scores.type',
-            'homework'
-           ]
-          },
-          then: '$scores.score',
-          'else': '$$REMOVE'
-         }
-        }
-       }
-      }
-     }, {
-      $project: {
-       _id: 0,
-       class_id: '$_id',
-       avg: {
-        $sum: [
-         {
-          $multiply: [
-           {
-            $avg: '$exam'
-           },
-           0.5
-          ]
-         },
-         {
-          $multiply: [{$avg: '$quiz'},0.3]},
-         {
-          $multiply: [{$avg: '$homework'},0.2]}
-        ]
-        }}}, 
-           {
-      $group: {
-       _id: null,
-       class_id: {
-        $push: '$class_id'
-       },
-       totalStudents: {
-        $sum: 1
-       },
-       above60Students: {
-        $sum: {
-         $cond: {
-          'if': { $gt: ['$avg', 60]
-          },
-          then: 1,
-          'else': 0
-         }
-        }
-       }
-      }
-     }, {
-      $project: {
-        totalStudents: '$totalStudents',
-        above60Students: '$above60Students',
-       ratio: {
-        $divide: [
-         '$above60Students',
-         '$totalStudents'
-        ]
-       }
-      }
-     }])
-		.toArray();
 	res.send(result);
 });
 
 app.get('/grades/stats/:id', async (req, res) => {
-  let collection = await db.collection('grades')
-  let result = await collection.aggregate([
-    {
-      '$match': {
-        'class_id': Number(req.params.id)
-      }
-    }, {
-      '$unwind': {
-        'path': '$scores'
-      }
-    }, {
-      '$group': {
-        '_id': '$student_id', 
-        'quiz': {
-          '$push': {
-            '$cond': {
-              'if': {
-                '$eq': [
-                  '$scores.type', 'quiz'
-                ]
-              }, 
-              'then': '$scores.score', 
-              'else': '$$REMOVE'
-            }
-          }
-        }, 
-        'exam': {
-          '$push': {
-            '$cond': {
-              'if': {
-                '$eq': [
-                  '$scores.type', 'exam'
-                ]
-              }, 
-              'then': '$scores.score', 
-              'else': '$$REMOVE'
-            }
-          }
-        }, 
-        'homework': {
-          '$push': {
-            '$cond': {
-              'if': {
-                '$eq': [
-                  '$scores.type', 'homework'
-                ]
-              }, 
-              'then': '$scores.score', 
-              'else': '$$REMOVE'
-            }
-          }
-        }
-      }
-    }, {
-      '$project': {
-        '_id': 0, 
-        'class_id': '$_id', 
-        'avg': {
-          '$sum': [
-            {
-              '$multiply': [
-                {
-                  '$avg': '$exam'
-                }, 0.5
-              ]
-            }, {
-              '$multiply': [
-                {
-                  '$avg': '$quiz'
-                }, 0.3
-              ]
-            }, {
-              '$multiply': [
-                {
-                  '$avg': '$homework'
-                }, 0.2
-              ]
-            }
-          ]
-        }
-      }
-    }, {
-      '$group': {
-        '_id': null, 
-        'class_id': {
-          '$push': '$class_id'
-        }, 
-        'totalStudents': {
-          '$sum': 1
-        }, 
-        'above60Students': {
-          '$sum': {
-            '$cond': {
-              'if': {'$gt': ['$avg', 60]}, 
-              'then': 1, 
-              'else': 0
-            }}}}}, 
-    {
-      '$project': {
-        'ratio': {
-          '$divide': [
-            '$above60Students', '$totalStudents'
-          ]}}}
-  ]).toArray()
-  //  console.log(result)
-   res.send(result)
-})
+	let collection = await db.collection('grades');
+	let result = await collection
+		.aggregate([
+			{
+				'$match': {
+					'class_id': Number(req.params.id)
+				}
+			},
+			{
+				'$unwind': {
+					'path': '$scores'
+				}
+			},
+			{
+				'$group': {
+					'_id': '$student_id',
+					'quiz': {
+						'$push': {
+							'$cond': {
+								'if': {
+									'$eq': ['$scores.type', 'quiz']
+								},
+								'then': '$scores.score',
+								'else': '$$REMOVE'
+							}
+						}
+					},
+					'exam': {
+						'$push': {
+							'$cond': {
+								'if': {
+									'$eq': ['$scores.type', 'exam']
+								},
+								'then': '$scores.score',
+								'else': '$$REMOVE'
+							}
+						}
+					},
+					'homework': {
+						'$push': {
+							'$cond': {
+								'if': {
+									'$eq': ['$scores.type', 'homework']
+								},
+								'then': '$scores.score',
+								'else': '$$REMOVE'
+							}
+						}
+					}
+				}
+			},
+			{
+				'$project': {
+					'_id': 0,
+					'class_id': '$_id',
+					'avg': {
+						'$sum': [
+							{
+								'$multiply': [
+									{
+										'$avg': '$exam'
+									},
+									0.5
+								]
+							},
+							{
+								'$multiply': [
+									{
+										'$avg': '$quiz'
+									},
+									0.3
+								]
+							},
+							{
+								'$multiply': [
+									{
+										'$avg': '$homework'
+									},
+									0.2
+								]
+							}
+						]
+					}
+				}
+			},
+			{
+				'$group': {
+					'_id': null,
+					'class_id': {
+						'$push': '$class_id'
+					},
+					'totalStudents': {
+						'$sum': 1
+					},
+					'above60Students': {
+						'$sum': {
+							'$cond': {
+								'if': { '$gt': ['$avg', 60] },
+								'then': 1,
+								'else': 0
+							}
+						}
+					}
+				}
+			},
+			{
+				'$project': {
+					'ratio': {
+						'$divide': ['$above60Students', '$totalStudents']
+					}
+				}
+			}
+		])
+		.toArray();
+	//  console.log(result)
+	res.send(result);
+});
 
 app.get('/grades', async (req, res, next) => {
 	let collection = await db.collection('grades');
-	let totalStudents = await collection.aggregate([
+	let totalStudents = await collection
+		.aggregate([
 			{
 				$count: 'totalStudents'
 			}
